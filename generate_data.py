@@ -17,23 +17,11 @@ def feature_array(frame, add_time_of_day, add_day_of_week):
     return np.concatenate(features, axis=-1)
 
 
-def make_samples(data, history_length, prediction_length, context_mode, points_per_day):
+def make_samples(data, history_length, prediction_length):
     inputs = []
     targets = []
-    first_origin = history_length
-    if context_mode == "periodic":
-        first_origin = 7 * points_per_day
-    for origin in range(first_origin, len(data) - prediction_length + 1):
-        recent = data[origin - history_length:origin]
-        if context_mode == "periodic":
-            weekly_start = origin - 7 * points_per_day
-            daily_start = origin - points_per_day
-            weekly = data[weekly_start:weekly_start + history_length]
-            daily = data[daily_start:daily_start + history_length]
-            sample = np.concatenate([weekly, daily, recent], axis=0)
-        else:
-            sample = recent
-        inputs.append(sample)
+    for origin in range(history_length, len(data) - prediction_length + 1):
+        inputs.append(data[origin - history_length:origin])
         targets.append(data[origin:origin + prediction_length, :, 0])
     return np.stack(inputs), np.stack(targets)
 
@@ -55,8 +43,6 @@ def parse_args():
     parser.add_argument("--output_dir", required=True)
     parser.add_argument("--history_length", type=int, default=12)
     parser.add_argument("--prediction_length", type=int, default=12)
-    parser.add_argument("--context_mode", choices=("contiguous", "periodic"), default="contiguous")
-    parser.add_argument("--points_per_day", type=int, default=288)
     parser.add_argument("--add_time_of_day", action="store_true")
     parser.add_argument("--add_day_of_week", action="store_true")
     return parser.parse_args()
@@ -66,5 +52,5 @@ if __name__ == "__main__":
     arguments = parse_args()
     frame = pd.read_hdf(arguments.traffic_file)
     data = feature_array(frame, arguments.add_time_of_day, arguments.add_day_of_week)
-    x, y = make_samples(data, arguments.history_length, arguments.prediction_length, arguments.context_mode, arguments.points_per_day)
+    x, y = make_samples(data, arguments.history_length, arguments.prediction_length)
     split_and_save(x, y, Path(arguments.output_dir))

@@ -22,10 +22,10 @@ METR-LA and PeMS-BAY use the splits and sensor graphs distributed with [DCRNN](h
 
 Prepared files are stored as `train.npz`, `val.npz`, and `test.npz`:
 
-| Key | Contiguous shape | Periodic shape |
-| --- | --- | --- |
-| `x` | `(samples, H, nodes, features)` | `(samples, 3H, nodes, features)` |
-| `y` | `(samples, P, nodes)` | `(samples, P, nodes)` |
+| Key | Shape |
+| --- | --- |
+| `x` | `(samples, H, nodes, features)` |
+| `y` | `(samples, P, nodes)` |
 
 For five-minute road-network observations:
 
@@ -34,11 +34,10 @@ python generate_data.py \
   --traffic_file data/metr-la.h5 \
   --output_dir data/METR-LA \
   --history_length 12 \
-  --prediction_length 12 \
-  --context_mode contiguous
+  --prediction_length 12
 ```
 
-`contiguous` uses the `H` observations immediately preceding the prediction origin. `periodic` concatenates weekly, daily, and recent windows in that order. The two modes are explicit and cannot be mixed in one checkpoint.
+Each sample uses the `H` observations immediately preceding the prediction origin.
 
 ## Model
 
@@ -52,7 +51,7 @@ The encoded history initializes a multilayer GRU. The final history representati
 
 ## Training
 
-Dataset configurations are under `configs/`. They specify the complete scale set, rank, seed, history length, prediction length, optimizer settings, early-stopping patience, input mode, metric mask, and prediction clipping policy.
+Dataset configurations are under `configs/`. They specify the complete scale set, rank, seed, history length, prediction length, optimizer settings, early-stopping patience, metric mask, and prediction clipping policy.
 
 ```bash
 python main.py --config configs/metr_la.json
@@ -60,10 +59,6 @@ python main.py --config configs/pems_bay.json
 ```
 
 The best checkpoint is selected by validation MAE and saved to the configured path. With `null_value` set to `null`, MAE and RMSE use every target value; MAPE excludes zero denominators. With a numeric `null_value`, all three metrics use the same validity mask. `clip_predictions` is `null` in the supplied configurations, so reported predictions are not clipped.
-
-## Periodic comparison
-
-Generate a separate dataset with `--context_mode periodic`, copy the corresponding configuration, change `data_path`, set `context_mode` to `periodic`, and use a distinct `checkpoint_path`. The graph encoder and all other model parameters remain shared across the weekly, daily, and recent contexts. Their forecasts are combined by learned node- and horizon-specific softmax weights.
 
 ## Tests
 

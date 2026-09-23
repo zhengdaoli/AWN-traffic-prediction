@@ -82,17 +82,13 @@ class AWN(nn.Module):
         graph_layers=3,
         recurrent_layers=2,
         directed=False,
-        context_mode="contiguous",
     ):
         super().__init__()
         if scales is None:
             scales = [0.1 + 0.2 * index for index in range(20)]
-        if context_mode not in {"contiguous", "periodic"}:
-            raise ValueError("context_mode must be contiguous or periodic")
         self.num_nodes = int(np.asarray(adjacency).shape[0])
         self.history_length = history_length
         self.prediction_length = prediction_length
-        self.context_mode = context_mode
         self.shift_weight = shift_weight
         self.blocks = nn.ModuleList()
         self.residual_projections = nn.ModuleList()
@@ -104,8 +100,6 @@ class AWN(nn.Module):
         self.low_rank_right = nn.Parameter(torch.empty(rank, self.num_nodes))
         self.recurrent = nn.GRU(hidden_channels, hidden_channels, recurrent_layers, batch_first=True)
         self.readout = nn.Linear(hidden_channels, output_channels)
-        if context_mode == "periodic":
-            self.context_logits = nn.Parameter(torch.zeros(3, self.num_nodes, prediction_length))
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -143,24 +137,4 @@ class AWN(nn.Module):
         return prediction
 
     def forward(self, inputs, return_attention=False):
-        expected = self.history_length if self.context_mode == "contiguous" else 3 * self.history_length
-        if inputs.size(1) != expected:
-            raise ValueError(f"expected {expected} input steps, received {inputs.size(1)}")
-        if self.context_mode == "contiguous":
-            return self.encode_context(inputs, return_attention)
-        contexts = torch.split(inputs, self.history_length, dim=1)
-        outputs = []
-        attentions = []
-        for context in contexts:
-            result = self.encode_context(context, return_attention)
-            if return_attention:
-                output, attention = result
-                outputs.append(output)
-                attentions.append(attention)
-            else:
-                outputs.append(result)
-        weights = torch.softmax(self.context_logits, dim=0).permute(2, 1, 0).unsqueeze(0).unsqueeze(-1)
-        prediction = torch.sum(torch.stack(outputs, dim=3) * weights, dim=3)
-        if return_attention:
-            return prediction, torch.stack(attentions, dim=1)
-        return prediction
+        return self.encode_context(inputs, return_attention)

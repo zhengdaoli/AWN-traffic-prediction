@@ -15,7 +15,6 @@
   "graph_layers": 3,
   "recurrent_layers": 2,
   "directed": false,
-  "context_mode": "contiguous",
   "batch_size": 128,
   "epochs": 200,
   "patience": 20,

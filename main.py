@@ -41,7 +41,6 @@ def train(config):
         graph_layers=config["graph_layers"],
         recurrent_layers=config["recurrent_layers"],
         directed=config["directed"],
-        context_mode=config["context_mode"],
     ).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=config["learning_rate"], weight_decay=config["weight_decay"])
     null_value = config.get("null_value")

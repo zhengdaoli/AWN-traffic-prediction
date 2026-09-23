@@ -27,11 +27,6 @@ class ModelTest(unittest.TestCase):
         self.assertLessEqual(torch.linalg.matrix_rank(correction).item(), 2)
         self.assertFalse(any("krandw" in name for name, _ in model.named_parameters()))
 
-    def test_periodic_forward(self):
-        model = AWN(self.adjacency, history_length=4, prediction_length=3, scales=[0.1], rank=2, graph_layers=1, context_mode="periodic")
-        output = model(torch.randn(2, 12, 3, 1))
-        self.assertEqual(tuple(output.shape), (2, 3, 3, 1))
-
     def test_directed_forward(self):
         adjacency = np.array([[0, 1, 0], [0, 0, 1], [1, 0, 0]], dtype=np.float32)
         model = AWN(adjacency, history_length=4, prediction_length=3, scales=[0.1], rank=2, graph_layers=1, directed=True)
